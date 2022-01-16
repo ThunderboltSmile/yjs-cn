@@ -153,23 +153,16 @@ ymap.set('food', foodArray)
 ymap.get('food') === foodArray // => true
 ymap.set('fruit', foodArray) // => Error! foodArray is already defined
 ```
+现在你知道如何在共享文档中定义数据类型了。接下来你可以查看这些例子 [demo repository](https://github.com/yjs/yjs-demos) 或者继续阅读API文档。
 
-Now you understand how types are defined on a shared document. Next you can jump
-to the [demo repository](https://github.com/yjs/yjs-demos) or continue reading
-the API docs.
+### Example: 使用和绑定 Provider
 
-### Example: Using and combining providers
+任何 yjs 的 provider 都可以相互结合，因此你可以通过不同的网络技术来同步数据。
 
-Any of the Yjs providers can be combined with each other. So you can sync data
-over different network technologies.
+大多数情况下你需要的是 network provider (比如 y-websocket or y-webrtc) 与持久化 provider 结合使用 (y-indexeddb in the browser)。
+持久化允许你快速加载数据并且能够同步那些即使是在离线状态下创建的数据
 
-In most cases you want to use a network provider (like y-websocket or y-webrtc)
-in combination with a persistence provider (y-indexeddb in the browser).
-Persistence allows you to load the document faster and to persist data that is
-created while offline.
-
-For the sake of this demo we combine two different network providers with a
-persistence provider.
+下面这个例子，我们将两种不同的 Provider 结合起来。
 
 ```js
 import * as Y from 'yjs'
@@ -179,30 +172,30 @@ import { IndexeddbPersistence } from 'y-indexeddb'
 
 const ydoc = new Y.Doc()
 
-// this allows you to instantly get the (cached) documents data
+// 这样可以快速获取本地缓存的数据
 const indexeddbProvider = new IndexeddbPersistence('count-demo', ydoc)
 indexeddbProvider.whenSynced.then(() => {
   console.log('loaded data from indexed db')
 })
 
-// Sync clients with the y-webrtc provider.
+// 使用 y-webrtc provider 同步客户端数据
 const webrtcProvider = new WebrtcProvider('count-demo', ydoc)
 
-// Sync clients with the y-websocket provider
+// 使用 y-websocket provider 同步客户端数据
 const websocketProvider = new WebsocketProvider(
   'wss://demos.yjs.dev', 'count-demo', ydoc
 )
 
-// array of numbers which produce a sum
+// 一个用来计算总和的数字列表
 const yarray = ydoc.getArray('count')
 
-// observe changes of the sum
+// 观察求和结果的变化
 yarray.observe(event => {
-  // print updates when the data changes
+  // 当数据更新的时候打印出来
   console.log('new sum: ' + yarray.toArray().reduce((a,b) => a + b))
 })
 
-// add 1 to the sum
+// 想列表中增加数据
 yarray.push([1]) // => "new sum: 1"
 ```
 
@@ -218,9 +211,7 @@ import * as Y from 'yjs'
   <summary><b>Y.Array</b></summary>
   <br>
   <p>
-A shareable Array-like type that supports efficient insert/delete of elements
-at any position. Internally it uses a linked list of Arrays that is split when
-necessary.
+支持在任何位置高效地插入/删除元素的类数组数据类型，其内部是使用一个在必要时候可以进行分割的数组链表来实现的。
   </p>
   <pre>const yarray = new Y.Array()</pre>
   <dl>
@@ -228,9 +219,8 @@ necessary.
     <dd></dd>
     <b><code>insert(index:number, content:Array&lt;object|boolean|Array|string|number|null|Uint8Array|Y.Type&gt;)</code></b>
     <dd>
-Insert content at <var>index</var>. Note that content is an array of elements.
-I.e. <code>array.insert(0, [1])</code> splices the list and inserts 1 at
-position 0.
+在 <var>index</var>的位置插入内容。 注意插入的内容是一个元素列表。
+I.e. <code>array.insert(0, [1])</code> 分割数组并且在位置0插入1
     </dd>
     <b><code>push(Array&lt;Object|boolean|Array|string|number|null|Uint8Array|Y.Type&gt;)</code></b>
     <dd></dd>
@@ -241,7 +231,7 @@ position 0.
     <b><code>get(index:number)</code></b>
     <dd></dd>
     <b><code>slice(start:number, end:number):Array&lt;Object|boolean|Array|string|number|null|Uint8Array|Y.Type&gt;</code></b>
-    <dd>Retrieve a range of content</dd>
+    <dd>提取特定范围的内容</dd>
     <b><code>length:number</code></b>
     <dd></dd>
     <b>
@@ -254,38 +244,30 @@ forEach(function(value:object|boolean|Array|string|number|null|Uint8Array|Y.Type
     <b><code>map(function(T, number, YArray):M):Array&lt;M&gt;</code></b>
     <dd></dd>
     <b><code>toArray():Array&lt;object|boolean|Array|string|number|null|Uint8Array|Y.Type&gt;</code></b>
-    <dd>Copies the content of this YArray to a new Array.</dd>
+    <dd>将一个数组中的内容拷贝至一个新的数组</dd>
     <b><code>toJSON():Array&lt;Object|boolean|Array|string|number|null&gt;</code></b>
-    <dd>
-Copies the content of this YArray to a new Array. It transforms all child types
-to JSON using their <code>toJSON</code> method.
+    <dd>复制数组中的内容到一个新的数组中，该方法会将元素的类型通过各自的 <code>toJSON</code> 方法转换为JSON类型。
     </dd>
     <b><code>[Symbol.Iterator]</code></b>
     <dd>
-      Returns an YArray Iterator that contains the values for each index in the array.
+      返回迭代器接口
       <pre>for (let value of yarray) { .. }</pre>
     </dd>
     <b><code>observe(function(YArrayEvent, Transaction):void)</code></b>
     <dd>
-Adds an event listener to this type that will be called synchronously every time
-this type is modified. In the case this type is modified in the event listener,
-the event listener will be called again after the current event listener returns.
+为这个数组添加一个事件监听器，这个监听会在每次数据变化后同步触发。如果在监听器中修改了数据, 事件监听器将会在当前监听事件返回后再次触发。
     </dd>
     <b><code>unobserve(function(YArrayEvent, Transaction):void)</code></b>
     <dd>
-      Removes an <code>observe</code> event listener from this type.
+      删除一个该数据上的监听器。
     </dd>
     <b><code>observeDeep(function(Array&lt;YEvent&gt;, Transaction):void)</code></b>
     <dd>
-Adds an event listener to this type that will be called synchronously every time
-this type or any of its children is modified. In the case this type is modified
-in the event listener, the event listener will be called again after the current
-event listener returns. The event listener receives all Events created by itself
-or any of its children.
+这个与上面的方法作用类似，不过用这种方式添加的监听器，在数据的子数据发生改变时，也会触发回调。 如果在监听回调中修改了数据, 也会在当前回调完成后再次触发。 这个事件监听器会收到来自本身或者自节点数据产生的所有事件。
     </dd>
     <b><code>unobserveDeep(function(Array&lt;YEvent&gt;, Transaction):void)</code></b>
     <dd>
-      Removes an <code>observeDeep</code> event listener from this type.
+      移除数据上的某个深度监听。
     </dd>
   </dl>
 </details>
